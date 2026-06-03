@@ -5,6 +5,24 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Fase 4 (precios de mercado y P/L estimado)
+
+- `backend/market/prices.py`: para cada transacción con ticker obtiene vía
+  **yfinance** el cierre en/antes de `tx_date` (`price_at_tx`) y el último cierre
+  (`price_current`); calcula `return_pct` y, para compras, `est_gain_min/max`
+  (rango de monto × variación). Cachea cierres en la tabla `prices`. El proveedor
+  de datos es **inyectable** (`fetcher`) para probar sin red.
+- Nuevas columnas en `transactions`: `price_at_tx, price_current, return_pct,
+  est_gain_min, est_gain_max, price_status` (ok / no_ticker / no_price) + migración.
+- CLI `scripts/run_enrich.py`; tests herméticos en `tests/test_market_prices.py`.
+- **Validado con yfinance real** (8 tickers, 22 tx): p. ej. AA +93.1% (compra
+  2024-10-23 a $41.88, actual $80.86), AAPL +34.5%. Precios coherentes.
+- Recordatorio: P/L es **estimación por rango** (los PTR no declaran cantidades);
+  activos sin ticker (bonos, fondos, notas) se marcan `no_ticker`.
+- Construido en `feature/market-data` → PR a `develop`.
+
+---
+
 ## 2026-06-03 — Fase 3 (parsing de PDFs → transacciones)
 
 - `backend/parse/ptr_parser.py`: extrae las transacciones del texto del PDF

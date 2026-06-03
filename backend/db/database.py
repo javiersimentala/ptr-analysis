@@ -26,8 +26,21 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# Columnas añadidas a `transactions` después del esquema inicial (nombre -> tipo).
+_TX_ADDED_COLUMNS = {
+    "asset_type": "TEXT",
+    "price_at_tx": "REAL",
+    "price_current": "REAL",
+    "return_pct": "REAL",
+    "est_gain_min": "REAL",
+    "est_gain_max": "REAL",
+    "price_status": "TEXT",
+}
+
+
 def _migrate(conn: sqlite3.Connection) -> None:
     """Migra bases creadas con un esquema anterior (añade columnas nuevas)."""
     cols = {row[1] for row in conn.execute("PRAGMA table_info(transactions)")}
-    if "asset_type" not in cols:
-        conn.execute("ALTER TABLE transactions ADD COLUMN asset_type TEXT")
+    for name, col_type in _TX_ADDED_COLUMNS.items():
+        if name not in cols:
+            conn.execute(f"ALTER TABLE transactions ADD COLUMN {name} {col_type}")

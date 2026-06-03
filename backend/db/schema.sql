@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount_min        REAL,             -- limite inferior del rango declarado
     amount_max        REAL,             -- limite superior del rango declarado
     raw_amount        TEXT,             -- texto original del rango (auditoria)
+    price_at_tx       REAL,             -- cierre en/antes de tx_date (precio "de compra")
+    price_current     REAL,             -- ultimo cierre conocido
+    return_pct        REAL,             -- variacion: price_current/price_at_tx - 1
+    est_gain_min      REAL,             -- ganancia/perdida estimada (extremo bajo del rango)
+    est_gain_max      REAL,             -- ganancia/perdida estimada (extremo alto del rango)
+    price_status      TEXT,             -- ok / no_ticker / no_price
     created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_tx_doc ON transactions(doc_id);
