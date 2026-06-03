@@ -11,6 +11,10 @@ reciente va arriba.
   funcionan desde la máquina sin el conector MCP (cuenta `javiersimentala`).
 - Añadido workflow de **CI** (`.github/workflows/ci.yml`) que corre `pytest` en
   cada push/PR a `main` y `develop`.
+- **Seguridad:** `.gitignore` reforzado para bloquear claves privadas y archivos
+  de secretos (`*.pem`, `*.key`, `id_rsa`, `credentials.json`, `.env.*`, etc.) y
+  job de **gitleaks** en CI que falla si se intenta subir algún secreto.
+  Auditoría inicial: 0 secretos en el historial.
 
 ---
 

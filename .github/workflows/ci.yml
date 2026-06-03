@@ -24,3 +24,15 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+  # Escaneo de secretos: bloquea cualquier clave/credencial que se intente subir.
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historial completo para escanear todos los commits
+      - name: Gitleaks (deteccion de secretos)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,6 +13,27 @@ env/
 
 # --- Variables de entorno ---
 .env
+.env.*
+!.env.example
+
+# --- Secretos / claves privadas (NUNCA subir) ---
+*.pem
+*.key
+*.ppk
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.token
+secrets.*
+secrets.yml
+secrets.yaml
+credentials.json
+service-account*.json
+*-credentials.json
+.netrc
 
 # --- Base de datos / datos generados ---
 *.db
