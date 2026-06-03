@@ -5,6 +5,19 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Fase 2 (descarga de PDFs)
+
+- `backend/download/pdf_downloader.py`: descarga los PDFs de los PTR pendientes
+  (`filings.filing_type='P'`, `downloaded=0`) a `data/raw/ptr/{año}/{DocID}.pdf`.
+- **Caché** (no re-descarga), **rate-limiting** (`RATE_LIMIT_SECONDS`), **reintentos**
+  con backoff (429/5xx) vía `urllib3 Retry`, `User-Agent` propio. Marca `downloaded=1`.
+- CLI `scripts/run_download.py [año] [--limit N] [--delay S]`. Tests en
+  `tests/test_pdf_downloader.py` (sesión HTTP falsa, sin red).
+- Verificado en vivo: 3 PDFs reales descargados del House Clerk (~68 KB c/u).
+- Construido en la rama `feature/pdf-download` → PR a `develop`.
+
+---
+
 ## 2026-06-03 — Infra: GitHub CLI + CI
 
 - Instalado **GitHub CLI (gh 2.93)** y `gh auth setup-git`: ahora `git push`/`pull`

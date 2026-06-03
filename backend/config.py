@@ -25,6 +25,11 @@ PTR_PDF_URL = HOUSE_BASE + "/ptr-pdfs/{year}/{doc_id}.pdf"
 # User-Agent cortes para identificar el scraper y no ser bloqueados.
 USER_AGENT = "ptr-analysis/0.1 (research project; contact via GitHub)"
 
+# --- Parametros de descarga (Fase 2) --------------------------------------
+REQUEST_TIMEOUT = 60          # segundos maximos por peticion
+RATE_LIMIT_SECONDS = 1.0      # pausa entre descargas (cortesia con el servidor)
+DOWNLOAD_RETRIES = 4          # reintentos ante errores transitorios (429/5xx)
+
 # Mapa de la columna FilingType del indice -> descripcion legible.
 FILING_TYPES = {
     "P": "Periodic Transaction Report",
