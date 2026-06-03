@@ -116,3 +116,22 @@ def ingest_year(year: int = config.DEFAULT_YEAR) -> dict:
     conn.close()
 
     return {"year": year, "total": total, "by_type": by_type}
+
+
+# El House Clerk publica el índice anual desde 2008 (los PTR existen desde 2013).
+FIRST_AVAILABLE_YEAR = 2008
+FIRST_PTR_YEAR = 2013
+
+
+def ingest_years(years, *, on_event=None) -> dict:
+    """Ingesta el índice de varios años. Devuelve {año: resultado|error}."""
+    summary: dict[int, dict] = {}
+    for year in years:
+        try:
+            result = ingest_year(year)
+        except Exception as exc:  # año sin índice, red, etc.
+            result = {"year": year, "error": type(exc).__name__}
+        summary[year] = result
+        if on_event:
+            on_event(year, result)
+    return summary

@@ -5,6 +5,22 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Soporte histórico multi-año (2008→2026)
+
+- Ingesta multi-año: `index_ingest.ingest_years` + CLI `run_ingest.py` acepta año,
+  rango (`2013-2026`) o `all`. `run_download.py` y `run_parse.py` aceptan `all`.
+- **Parser tolerante al formato antiguo (~2014-2016):** tipo/owner en minúscula
+  (`s`→S, `sP`→SP), ticker sin código `[ST]` (último paréntesis), terminadores de
+  tabla case-insensitive (IPO / certificación) además del pie de asteriscos.
+- **Validación:** índice histórico completo cargado = **40,775 filings (2008-2026),
+  8,213 PTR**. End-to-end en años viejos: 2014 → 131 tx (121 con ticker) tras el fix.
+- **Límites:** los PTR (operaciones) existen desde **2013** (antes, 0). Los
+  **escaneados** (DocID corto, frecuentes en 2013/inicios 2014) dan 0 tx y necesitan
+  **OCR** (pendiente). Descargar los ~8,200 PDFs es un lote largo (~1 req/s).
+- Rama `feature/multi-year`.
+
+---
+
 ## 2026-06-03 — Fase 4 (precios de mercado y P/L estimado)
 
 - `backend/market/prices.py`: para cada transacción con ticker obtiene vía

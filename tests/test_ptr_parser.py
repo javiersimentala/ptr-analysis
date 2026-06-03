@@ -72,3 +72,30 @@ def test_bono_con_owner_y_monto_partido():
 def test_raw_amount_formato():
     ko = P.parse_transactions(TEXT)[0]
     assert ko["raw_amount"] == "$1,001 - $15,000"
+
+
+# --- Formato antiguo (~2014): minúsculas, sin código [ST], sin pie de asteriscos ---
+OLD_TEXT = (
+    "Filing ID #20000077\n"
+    "tranSactionS\n"
+    "iD owner asset transaction Date notification amount\n"
+    "type Date\n"
+    "sP Hill International, Inc. (HIl) s 12/26/2013 12/30/2013 $15,001 - $50,000\n"
+    "FIlINg sTATus: New\n"
+    "initial Public offeringS\n"
+    "nmlkj Yes nmlkji No\n"
+    "certification anD Signature\n"
+    "gfedcb I CERTIFY that the statements I have made ...\n"
+)
+
+
+def test_formato_antiguo_2014():
+    txs = P.parse_transactions(OLD_TEXT)
+    assert len(txs) == 1                       # el pie (IPO/certificación) no genera filas
+    t = txs[0]
+    assert t["owner"] == "SP"                  # 'sP' -> SP
+    assert t["tx_type"] == "S"                 # 's' minúscula -> S
+    assert t["ticker"] == "HIL"                # '(HIl)' -> HIL
+    assert t["amount_min"] == 15001 and t["amount_max"] == 50000
+    assert t["asset_name"].startswith("Hill International")
+    assert "certify" not in (t["asset_name"] or "").lower()

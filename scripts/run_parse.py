@@ -24,18 +24,23 @@ from backend.parse import ptr_parser  # noqa: E402
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Parsea PDFs de PTR a transacciones.")
-    parser.add_argument("year", nargs="?", type=int, default=config.DEFAULT_YEAR)
+    parser.add_argument(
+        "year", nargs="?", default=str(config.DEFAULT_YEAR),
+        help="año (p. ej. 2025) o 'all' para todos los años",
+    )
     parser.add_argument("--limit", type=int, default=None, help="máximo de PDFs a parsear")
     parser.add_argument("--quiet", action="store_true", help="no mostrar por archivo")
     args = parser.parse_args()
 
-    print(f"Parseando PDFs de PTR del año {args.year} (limit={args.limit})...\n")
+    year = None if str(args.year).lower() == "all" else int(args.year)
+    label = "todos los años" if year is None else f"año {year}"
+    print(f"Parseando PDFs de PTR ({label}, limit={args.limit})...\n")
 
     def progress(doc_id: str, result: str) -> None:
         if not args.quiet:
             print(f"  {doc_id}: {result}")
 
-    stats = ptr_parser.parse_all(args.year, limit=args.limit, on_event=progress)
+    stats = ptr_parser.parse_all(year, limit=args.limit, on_event=progress)
 
     print(
         f"\nResumen: {stats['files']} PDFs parseados, "

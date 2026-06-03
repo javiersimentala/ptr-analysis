@@ -27,26 +27,32 @@ from backend import config
 from backend.db import database
 
 # Ancla de transacción: Tipo (P/S/E) + fecha + notificación + monto mín [- máx].
+# El tipo puede venir en minúscula en los PTR antiguos (~2014-2016).
 _ANCHOR = re.compile(
-    r"\b([PSE])\s+"
+    r"\b([PSEpse])\s+"
     r"(\d{1,2}/\d{1,2}/\d{4})\s+"        # fecha de la operación (año 4 dígitos)
     r"(\d{1,2}/\d{1,2}/\d{4})\s+"        # fecha de notificación
     r"\$([\d,]+)"                         # monto mínimo
     r"(?:\s*-\s*\$?([\d,]+))?"            # monto máximo (puede caer en la línea sig.)
 )
-_OWNER = re.compile(r"^(JT|SP|DC)\b")
-_TICKER = re.compile(r"\(([A-Z][A-Z0-9.\-]{0,5})\)")
+_OWNER = re.compile(r"^(JT|SP|DC)\b", re.IGNORECASE)
+_TICKER = re.compile(r"\(([A-Za-z][A-Za-z0-9.\-]{0,5})\)")   # moderno (activo con [ST])
+_TICKER_STRICT = re.compile(r"\(([A-Za-z]{1,5})\)")          # respaldo formato antiguo
 _ASSET_TYPE = re.compile(r"\[([A-Z]{2})\]")
 _AMOUNT_TOKEN = re.compile(r"\$([\d,]+)")
 # Sub-línea de metadatos: etiqueta corta seguida de ':'.
 _META = re.compile(r"^[A-Za-z][\w .,&/()-]{0,30}:")
 
-# Prefijos de líneas a ignorar (cabeceras repetidas, pie de página, cabecera PDF).
+# Prefijos de líneas a ignorar (cabeceras repetidas, cabecera del PDF). En minúscula.
 _NOISE_PREFIXES = (
-    "ID Owner Asset", "Type Date", "$200?", "Filing ID #", "Clerk of the House",
-    "I CERTIFY", "Digitally Signed", "Yes No",
+    "id owner asset", "type date", "$200?", "filing id #", "clerk of the house",
+    "digitally signed", "yes no",
 )
-_TABLE_END = "* For the complete list"
+# Marcadores (case-insensitive) que indican el fin de la tabla de transacciones.
+_TERMINATORS = (
+    "* for the complete list", "initial public offering",
+    "certification and signature", "i certify that",
+)
 
 # Tipos de activo cuyo paréntesis SÍ contiene un ticker (acciones / opciones).
 _TICKERED_TYPES = {"ST", "OP", "OL"}
@@ -75,8 +81,13 @@ def _num(value: str | None) -> float | None:
 
 
 def _is_noise(line: str) -> bool:
-    s = line.strip()
+    s = line.strip().lower()
     return not s or any(s.startswith(p) for p in _NOISE_PREFIXES)
+
+
+def _is_terminator(line: str) -> bool:
+    s = line.strip().lower()
+    return any(t in s for t in _TERMINATORS)
 
 
 def parse_transactions(text: str) -> list[dict]:
@@ -97,7 +108,7 @@ def parse_transactions(text: str) -> list[dict]:
     for raw in text.splitlines():
         line = raw.rstrip()
 
-        if line.strip().startswith(_TABLE_END):
+        if _is_terminator(line):
             flush()
             continue
         if _is_noise(line):
@@ -109,7 +120,7 @@ def parse_transactions(text: str) -> list[dict]:
             prefix = line[: m.start()].strip()
             cur = {
                 "asset_parts": [prefix] if prefix else [],
-                "tx_type": m.group(1),
+                "tx_type": m.group(1).upper(),
                 "tx_date": _iso(m.group(2)),
                 "notification_date": _iso(m.group(3)),
                 "amount_min": _num(m.group(4)),
@@ -147,7 +158,7 @@ def _finalize(cur: dict) -> dict:
     owner = None
     mo = _OWNER.match(asset)
     if mo:
-        owner = mo.group(1)
+        owner = mo.group(1).upper()
         asset = asset[mo.end():].strip()
 
     mt = _ASSET_TYPE.search(asset)
@@ -157,7 +168,12 @@ def _finalize(cur: dict) -> dict:
     if asset_type in _TICKERED_TYPES:
         mk = _TICKER.search(asset)
         if mk:
-            ticker = mk.group(1)
+            ticker = mk.group(1).upper()
+    elif asset_type is None:
+        # Formato antiguo sin código [XX]: el último paréntesis suele ser el ticker.
+        cands = _TICKER_STRICT.findall(asset)
+        if cands:
+            ticker = cands[-1].upper()
 
     amin, amax = cur["amount_min"], cur["amount_max"]
     if amin is not None and amax is not None:

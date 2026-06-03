@@ -64,8 +64,10 @@ python -m venv .venv
 # 2. Instalar dependencias (necesarias a partir de la Fase 2)
 pip install -r requirements.txt
 
-# 3. Ejecutar la Fase 1 — ingesta del índice (sólo stdlib, ya funciona)
-python scripts/run_ingest.py 2026
+# 3. Ejecutar la Fase 1 — ingesta del índice (un año, un rango o 'all')
+python scripts/run_ingest.py 2026          # un año
+python scripts/run_ingest.py 2013-2026     # un rango
+python scripts/run_ingest.py all           # todos los años disponibles (2008+)
 
 # 4. Ejecutar la Fase 2 — descargar los PDFs de los PTR
 python scripts/run_download.py 2026 --limit 10   # quita --limit para todos
@@ -101,6 +103,12 @@ y el actual, y estima la ganancia/pérdida por rango.
 | **5** | Portafolio y P/L estimado por congresista | ⏳ |
 | **6** | API (FastAPI) | ⏳ |
 | **7** | Frontend (Streamlit) | ⏳ |
+
+> **Cobertura histórica:** el índice existe desde **2008**, pero los PTR
+> (operaciones) sólo desde **2013** (STOCK Act): ~8,200 PTR en 2013–2026
+> (≈450–830/año). Los e-filed se parsean como texto; los **escaneados** (sobre
+> todo 2013 e inicios de 2014) requieren OCR (pendiente). Carga histórica completa:
+> `python scripts/run_ingest.py all && python scripts/run_download.py all && python scripts/run_parse.py all`.
 
 ---
 
