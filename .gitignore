@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+
+# --- Variables de entorno ---
+.env
+
+# --- Base de datos / datos generados ---
+*.db
+*.sqlite3
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Cache de herramientas ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- IDE / SO ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archivos temporales de Excel (~$...)
+~$*
