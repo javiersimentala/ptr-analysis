@@ -5,6 +5,22 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Fase 3 (parsing de PDFs → transacciones)
+
+- `backend/parse/ptr_parser.py`: extrae las transacciones del texto del PDF
+  (`pdfplumber`). Parser line-based anclado en `<Tipo> <Fecha> <Notif> <Monto>`;
+  maneja nombres de activo partidos en varias líneas, monto máximo en línea
+  siguiente, owner (JT/SP/DC), ticker (paréntesis en activos `[ST]/[OP]`) y código
+  de tipo de activo (`[XX]`). Normaliza los NUL (`\x00`) de las etiquetas.
+- Nueva columna `transactions.asset_type` + migración idempotente en `init_db`.
+- CLI `scripts/run_parse.py`; tests herméticos en `tests/test_ptr_parser.py`.
+- **Validación sobre datos reales:** 28 PDFs → **350 transacciones** (P=257, S=92,
+  E=1), 283 con ticker (185 distintos), 0 montos invertidos, 0 sin fecha, 0 fallos.
+  2 PDFs sin transacciones (probables escaneados → OCR a futuro).
+- Construido en `feature/pdf-parser` → PR a `develop`.
+
+---
+
 ## 2026-06-03 — Fase 2 (descarga de PDFs)
 
 - `backend/download/pdf_downloader.py`: descarga los PDFs de los PTR pendientes
