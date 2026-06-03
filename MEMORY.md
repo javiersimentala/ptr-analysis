@@ -5,6 +5,15 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Infra: GitHub CLI + CI
+
+- Instalado **GitHub CLI (gh 2.93)** y `gh auth setup-git`: ahora `git push`/`pull`
+  funcionan desde la máquina sin el conector MCP (cuenta `javiersimentala`).
+- Añadido workflow de **CI** (`.github/workflows/ci.yml`) que corre `pytest` en
+  cada push/PR a `main` y `develop`.
+
+---
+
 ## 2026-06-03 — Fase 0 (setup) + Fase 1 (ingesta del índice)
 
 **Decisiones de arranque**
