@@ -26,7 +26,10 @@ from backend.download import pdf_downloader  # noqa: E402
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Descarga PDFs de PTR del House Clerk.")
-    parser.add_argument("year", nargs="?", type=int, default=config.DEFAULT_YEAR)
+    parser.add_argument(
+        "year", nargs="?", default=str(config.DEFAULT_YEAR),
+        help="año (p. ej. 2025) o 'all' para todos los años",
+    )
     parser.add_argument("--limit", type=int, default=None, help="maximo de PDFs a bajar")
     parser.add_argument(
         "--delay", type=float, default=config.RATE_LIMIT_SECONDS,
@@ -34,15 +37,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"Descargando PDFs de PTR del anio {args.year} "
-          f"(limit={args.limit}, delay={args.delay}s)...\n")
+    year = None if str(args.year).lower() == "all" else int(args.year)
+    label = "todos los años" if year is None else f"año {year}"
+    print(f"Descargando PDFs de PTR ({label}, limit={args.limit}, delay={args.delay}s)...\n")
 
     def progress(doc_id: str, result: str) -> None:
         icon = {"downloaded": "[+]", "cached": "[=]"}.get(result, "[!]")
         print(f"  {icon} {doc_id}  {result}")
 
     stats = pdf_downloader.download_year(
-        args.year, limit=args.limit, delay=args.delay, on_event=progress
+        year, limit=args.limit, delay=args.delay, on_event=progress
     )
 
     print(
@@ -50,7 +54,7 @@ def main() -> None:
         f"{stats['cached']} en cache, {stats['failed']} fallidos "
         f"(de {stats['total']} pendientes)."
     )
-    print(f"PDFs en: {config.RAW_DIR / 'ptr' / str(args.year)}")
+    print(f"PDFs en: {config.RAW_DIR / 'ptr'}")
 
 
 if __name__ == "__main__":
