@@ -1,0 +1,17 @@
+[project]
+name = "ptr-analysis"
+version = "0.1.0"
+description = "Scraping y analisis de los Periodic Transaction Reports (PTR) del Congreso de EE.UU."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[tool.pytest.ini_options]
+# Permite que los tests importen el paquete `backend` sin instalar el proyecto.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

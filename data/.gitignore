@@ -1,0 +1,5 @@
+# No versionar datos descargados/generados, pero conservar la estructura.
+*
+!.gitignore
+!*/
+!**/.gitkeep
