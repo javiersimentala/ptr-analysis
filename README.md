@@ -67,12 +67,16 @@ pip install -r requirements.txt
 # 3. Ejecutar la Fase 1 — ingesta del índice (sólo stdlib, ya funciona)
 python scripts/run_ingest.py 2026
 
-# 4. Correr las pruebas
+# 4. Ejecutar la Fase 2 — descargar los PDFs de los PTR
+python scripts/run_download.py 2026 --limit 10   # quita --limit para todos
+
+# 5. Correr las pruebas
 pytest
 ```
 
 La Fase 1 descarga el índice del año, lo carga en `data/processed/ptr.db`
-(SQLite) e imprime el conteo por tipo de filing.
+(SQLite) e imprime el conteo por tipo de filing. La Fase 2 baja los PDFs de
+cada PTR a `data/raw/ptr/{año}/` con caché y rate-limiting.
 
 ---
 
@@ -82,7 +86,7 @@ La Fase 1 descarga el índice del año, lo carga en `data/processed/ptr.db`
 |---|---|---|
 | **0** | Setup: repo, estructura, CI/git, docs | ✅ |
 | **1** | Ingesta del índice (`FD.txt` → tabla `filings`) | ✅ |
-| **2** | Descarga de los PDFs de cada PTR (con caché y rate-limit) | ⏳ |
+| **2** | Descarga de los PDFs de cada PTR (con caché y rate-limit) | ✅ |
 | **3** | Parsing de PDFs → tabla `transactions` | ⏳ |
 | **4** | Enriquecimiento con precios de mercado (yfinance) | ⏳ |
 | **5** | Portafolio y P/L estimado por congresista | ⏳ |
