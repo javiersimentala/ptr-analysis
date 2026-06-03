@@ -20,6 +20,14 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Crea las tablas a partir de schema.sql (idempotente)."""
+    """Crea las tablas (schema.sql) y aplica migraciones (idempotente)."""
     conn.executescript(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    _migrate(conn)
     conn.commit()
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Migra bases creadas con un esquema anterior (añade columnas nuevas)."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(transactions)")}
+    if "asset_type" not in cols:
+        conn.execute("ALTER TABLE transactions ADD COLUMN asset_type TEXT")

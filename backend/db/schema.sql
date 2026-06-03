@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     owner             TEXT,             -- SP / DC / JT (self/spouse/joint)
     asset_name        TEXT,
     ticker            TEXT,
+    asset_type        TEXT,             -- codigo del activo: ST, GS, OP, VA, ...
     tx_type           TEXT,             -- P (purchase) / S (sale) / E (exchange)
     tx_date           TEXT,             -- ISO YYYY-MM-DD
     notification_date TEXT,
