@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sqlite3
 
+from backend.db import database
 from backend.portfolio import builder
 
 # Expresión de la clave de congresista (igual que en builder).
@@ -14,7 +15,8 @@ _KEY = "(f.last_name || '|' || COALESCE(f.first_name, '') || '|' || COALESCE(f.s
 
 
 def ensure_built(conn: sqlite3.Connection) -> None:
-    """Construye members/positions si están vacíos pero ya hay transacciones."""
+    """Crea el esquema (si falta) y construye members/positions si están vacíos."""
+    database.init_db(conn)  # idempotente: garantiza que existan las tablas
     has_members = conn.execute("SELECT COUNT(*) FROM members").fetchone()[0]
     has_tx = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
     if not has_members and has_tx:
