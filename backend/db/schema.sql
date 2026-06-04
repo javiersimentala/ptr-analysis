@@ -92,3 +92,23 @@ CREATE TABLE IF NOT EXISTS positions (
     PRIMARY KEY (member_key, ticker)
 );
 CREATE INDEX IF NOT EXISTS idx_positions_member ON positions(member_key);
+
+-- Pesos del portafolio optimo (media-varianza) calculado por scripts/run_optimal.py.
+CREATE TABLE IF NOT EXISTS optimal_weights (
+    ticker      TEXT PRIMARY KEY,
+    weight      REAL,                   -- fraccion del portafolio (0..1)
+    exp_return  REAL,                   -- retorno anualizado esperado del activo
+    volatility  REAL,                   -- volatilidad anualizada del activo
+    computed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Una sola fila (id=1) con las metricas del portafolio optimo agregado.
+CREATE TABLE IF NOT EXISTS optimal_meta (
+    id           INTEGER PRIMARY KEY CHECK (id = 1),
+    exp_return   REAL,                  -- retorno anualizado del portafolio
+    volatility   REAL,                  -- volatilidad anualizada del portafolio
+    sharpe       REAL,                  -- ratio de Sharpe (rf = 0)
+    n_assets     INTEGER,               -- activos en el universo optimizado
+    lookback_days INTEGER,              -- ventana de historial usada
+    computed_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

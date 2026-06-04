@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Comparar &middot; PTR Analysis{% endblock %}
+{% block content %}
+  <h1 class="text-xl font-semibold text-slate-900">Comparar portafolios</h1>
+  <p class="text-sm text-slate-500 mb-6">
+    Selecciona dos o mas congresistas (Ctrl o Cmd + clic) para compararlos lado a lado.
+  </p>
+
+  <form method="get" class="bg-white border border-slate-200 rounded-lg p-4 mb-8 flex flex-wrap items-end gap-4">
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Congresistas</label>
+      <select name="keys" multiple size="8" class="w-80 border border-slate-300 rounded px-2 py-1.5 text-sm">
+        {% for m in all_members %}
+          <option value="{{ m.member_key }}" {% if m.member_key in keys %}selected{% endif %}>
+            {{ display_name(m.last_name, m.first_name) }} ({{ m.state_dst or '?' }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="bg-indigo-600 text-white text-sm px-4 py-1.5 rounded hover:bg-indigo-700">Comparar</button>
+  </form>
+
+  {% if selected %}
+    <h2 class="text-lg font-semibold text-slate-900 mb-2">Resumen</h2>
+    <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg mb-10">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+          <tr>
+            <th>Congresista</th><th>Distrito</th><th class="text-right">Operaciones</th>
+            <th class="text-right">Invertido ≤</th><th class="text-right">P/L est. ≤</th><th class="text-right">Win-rate</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for m in selected %}
+            <tr class="hover:bg-slate-50">
+              <td class="font-medium">
+                <a class="text-indigo-600 hover:underline" href="/politician?key={{ m.member_key|urlencode }}">
+                  {{ display_name(m.last_name, m.first_name) }}
+                </a>
+              </td>
+              <td class="text-slate-500">{{ m.state_dst or '—' }}</td>
+              <td class="text-right">{{ m.n_tx }}</td>
+              <td class="text-right">{{ m.invested_max|money }}</td>
+              <td class="text-right">{{ m.est_gain_max|money }}</td>
+              <td class="text-right">{{ m.win_rate|pct }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-2">Holdings por ticker</h2>
+    <p class="text-xs text-slate-500 mb-3">Valor neto estimado en dolares por congresista (vacio = no lo tiene).</p>
+    <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+          <tr>
+            <th>Ticker</th>
+            {% for m in selected %}<th class="text-right">{{ m.last_name }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for row in matrix %}
+            <tr class="hover:bg-slate-50">
+              <td class="font-medium">{{ row.ticker }}</td>
+              {% for cell in row.cells %}
+                <td class="text-right">
+                  {% if cell %}{{ cell.net_value|money }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+                </td>
+              {% endfor %}
+            </tr>
+          {% else %}
+            <tr><td colspan="{{ selected|length + 1 }}" class="text-center text-slate-400 py-6">Sin posiciones con ticker.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elif keys %}
+    <p class="text-slate-400">No se encontraron los congresistas seleccionados.</p>
+  {% endif %}
+{% endblock %}

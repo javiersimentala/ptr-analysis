@@ -5,7 +5,24 @@ reciente va arriba.
 
 ---
 
-## 2026-06-04 — Web FastAPI reemplaza a Streamlit (PR1 de la web)
+## 2026-06-04 — Web PR2: comparación + portafolio óptimo (Markowitz)
+
+- **Comparar** (`/compare`): multi-select de congresistas; tabla resumen + matriz
+  de holdings (ticker x congresista) con valor neto estimado.
+- **Portafolio óptimo** (`/optimal`): `backend/portfolio/optimize.py` con
+  optimización **media-varianza de máximo Sharpe** (solo largos, scipy SLSQP)
+  sobre el universo de tickers con mayor posición neta agregada del Congreso.
+  Proveedor de precios inyectable (tests sin red). La parte pesada la corre
+  `scripts/run_optimal.py` y guarda en tablas `optimal_weights`/`optimal_meta`;
+  la web sólo lee el resultado.
+- Validado con datos reales: universo de 12 (8 válidos; deslistados se omiten),
+  retorno esperado 41.2%, vol 19.3%, Sharpe 2.13. Tests en `tests/test_optimize.py`.
+- Dependencias nuevas: `scipy`, `numpy`. Se elimina `placeholder.html`.
+- Rama `feature/web-compare-optimal`. Siguiente: PR3 (README detallado).
+
+---
+
+## 2026-06-04 — Web PR1: FastAPI reemplaza a Streamlit
 
 - A pedido del usuario, se sustituye Streamlit por una **web real con FastAPI +
   Jinja2 + Tailwind (CDN)**: tema claro y profesional inspirado en pelositracker,

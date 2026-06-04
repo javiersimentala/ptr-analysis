@@ -11,7 +11,7 @@ derivadas (members/positions) llamando a ``queries.ensure_built``.
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -140,28 +140,54 @@ def politician_page(request: Request, key: str, year: int | None = None):
 
 
 @app.get("/compare", response_class=HTMLResponse)
-def compare_page(request: Request):
-    """Comparacion de portafolios (se implementa en el siguiente entregable)."""
+def compare_page(request: Request, keys: list[str] = Query(default=[])):
+    """Comparacion de portafolios de varios congresistas, lado a lado."""
+    conn = _conn()
+    try:
+        all_members = queries.list_members(conn, limit=2000)
+        selected = queries.members_by_keys(conn, keys)
+        # Por cada congresista seleccionado: mapa ticker -> fila de posicion.
+        per_member = {
+            m["member_key"]: {p["ticker"]: p for p in queries.member_portfolio(conn, m["member_key"])}
+            for m in selected
+        }
+    finally:
+        conn.close()
+
+    def total_abs(ticker: str) -> float:
+        total = 0.0
+        for m in selected:
+            pos = per_member[m["member_key"]].get(ticker)
+            if pos and pos["net_value"] is not None:
+                total += abs(pos["net_value"])
+        return total
+
+    # Matriz de holdings: una fila por ticker (union), columna por congresista.
+    tickers = sorted({tk for d in per_member.values() for tk in d}, key=lambda tk: -total_abs(tk))
+    matrix = [
+        {"ticker": tk, "cells": [per_member[m["member_key"]].get(tk) for m in selected]}
+        for tk in tickers
+    ]
     return templates.TemplateResponse(
         request,
-        "placeholder.html",
+        "compare.html",
         {
-            "active": "compare", "title": "Comparar portafolios",
-            "msg": "Comparacion lado a lado entre congresistas. En construccion.",
+            "active": "compare", "all_members": all_members, "selected": selected,
+            "keys": keys, "matrix": matrix,
         },
     )
 
 
 @app.get("/optimal", response_class=HTMLResponse)
 def optimal_page(request: Request):
-    """Portafolio optimo (se implementa en el siguiente entregable)."""
+    """Portafolio optimo (media-varianza) ya calculado por scripts/run_optimal.py."""
+    conn = _conn()
+    try:
+        meta, weights = queries.optimal_portfolio(conn)
+    finally:
+        conn.close()
     return templates.TemplateResponse(
-        request,
-        "placeholder.html",
-        {
-            "active": "optimal", "title": "Portafolio optimo",
-            "msg": "Optimizacion media-varianza sobre el universo del Congreso. En construccion.",
-        },
+        request, "optimal.html", {"active": "optimal", "meta": meta, "weights": weights}
     )
 
 
