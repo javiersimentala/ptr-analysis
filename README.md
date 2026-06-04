@@ -78,7 +78,10 @@ python scripts/run_parse.py 2026
 # 6. Ejecutar la Fase 4 — precios de mercado y P/L estimado (yfinance)
 python scripts/run_enrich.py            # usa --limit N para acotar
 
-# 7. Correr las pruebas
+# 7. Ejecutar la Fase 5 — portafolio y P/L por congresista
+python scripts/run_portfolio.py
+
+# 8. Correr las pruebas
 pytest
 ```
 
@@ -87,7 +90,9 @@ La Fase 1 descarga el índice del año, lo carga en `data/processed/ptr.db`
 cada PTR a `data/raw/ptr/{año}/` con caché y rate-limiting. La Fase 3 parsea
 cada PDF y carga la tabla `transactions` (activo, ticker, tipo, fecha y rango
 de monto). La Fase 4 añade, vía yfinance, el precio en la fecha de la operación
-y el actual, y estima la ganancia/pérdida por rango.
+y el actual, y estima la ganancia/pérdida por rango. La Fase 5 agrega todo por
+congresista en `members` (resumen, P/L, win-rate) y `positions` (posición neta
+estimada por ticker, con el punto medio del rango).
 
 ---
 
@@ -100,7 +105,7 @@ y el actual, y estima la ganancia/pérdida por rango.
 | **2** | Descarga de los PDFs de cada PTR (con caché y rate-limit) | ✅ |
 | **3** | Parsing de PDFs → tabla `transactions` | ✅ |
 | **4** | Enriquecimiento con precios de mercado (yfinance) | ✅ |
-| **5** | Portafolio y P/L estimado por congresista | ⏳ |
+| **5** | Portafolio y P/L estimado por congresista | ✅ |
 | **6** | API (FastAPI) | ⏳ |
 | **7** | Frontend (Streamlit) | ⏳ |
 
