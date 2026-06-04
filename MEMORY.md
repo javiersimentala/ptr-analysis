@@ -5,6 +5,27 @@ reciente va arriba.
 
 ---
 
+## 2026-06-03 — Fase 5 (portafolio y P/L por congresista)
+
+- `backend/portfolio/builder.py`: agrega `transactions` por congresista
+  (`apellido|nombre|estado-distrito`) en dos tablas derivadas:
+  - `members`: nº de operaciones, monto invertido (rango), P/L estimado total y
+    **win-rate** (compras valuadas con retorno > 0).
+  - `positions`: **posición neta estimada** por ticker = Σ medios(compras) −
+    Σ medios(ventas) (estimación en dólares, no acciones).
+- Tablas nuevas en el esquema; `build()` las reconstruye (idempotente).
+  `get_connection` ahora usa **WAL + busy_timeout** (permite descarga en
+  background + builds en paralelo sin "database is locked").
+- CLI `scripts/run_portfolio.py`; tests en `tests/test_portfolio_builder.py`.
+- **Validado** con datos reales: 35 congresistas, 303 posiciones a partir de las
+  transacciones cargadas. El P/L se llena al correr `run_enrich.py` completo.
+- Decisión de modelado (con el usuario): **portafolio completo con posición neta
+  estimada**. Rama `feature/portfolio`.
+- En paralelo: descarga histórica completa (`run_download.py all`) corriendo en
+  segundo plano.
+
+---
+
 ## 2026-06-03 — Soporte histórico multi-año (2008→2026)
 
 - Ingesta multi-año: `index_ingest.ingest_years` + CLI `run_ingest.py` acepta año,

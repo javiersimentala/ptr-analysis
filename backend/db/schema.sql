@@ -54,3 +54,41 @@ CREATE TABLE IF NOT EXISTS prices (
     fetched_at  TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (ticker, price_date)
 );
+
+-- Resumen por congresista (derivado; se reconstruye en la Fase 5).
+CREATE TABLE IF NOT EXISTS members (
+    member_key   TEXT PRIMARY KEY,
+    last_name    TEXT,
+    first_name   TEXT,
+    state_dst    TEXT,
+    n_tx         INTEGER,
+    n_buys       INTEGER,
+    n_sells      INTEGER,
+    n_tickers    INTEGER,
+    invested_min REAL,                  -- suma de rangos de compra (extremo bajo)
+    invested_max REAL,
+    est_gain_min REAL,                  -- P/L estimado total (compras valuadas)
+    est_gain_max REAL,
+    win_rate     REAL,                  -- fraccion de compras valuadas con retorno > 0
+    built_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Posicion neta estimada por congresista y ticker (derivado).
+CREATE TABLE IF NOT EXISTS positions (
+    member_key    TEXT,
+    ticker        TEXT,
+    last_name     TEXT,
+    first_name    TEXT,
+    state_dst     TEXT,
+    n_buys        INTEGER,
+    n_sells       INTEGER,
+    buy_value     REAL,                 -- suma de puntos medios de compras ($)
+    sell_value    REAL,                 -- suma de puntos medios de ventas ($)
+    net_value     REAL,                 -- buy_value - sell_value (posicion neta est. $)
+    est_gain_min  REAL,
+    est_gain_max  REAL,
+    return_pct    REAL,                 -- variacion media del activo desde las operaciones
+    price_current REAL,
+    PRIMARY KEY (member_key, ticker)
+);
+CREATE INDEX IF NOT EXISTS idx_positions_member ON positions(member_key);
