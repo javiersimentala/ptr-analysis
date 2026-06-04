@@ -94,6 +94,16 @@ y el actual, y estima la ganancia/pérdida por rango. La Fase 5 agrega todo por
 congresista en `members` (resumen, P/L, win-rate) y `positions` (posición neta
 estimada por ticker, con el punto medio del rango).
 
+### 🖥️ Dashboard (Streamlit)
+
+```bash
+streamlit run frontend/app.py
+```
+
+Abre `http://localhost:8501` con tres vistas: **Ranking** por P/L estimado,
+**Congresista** (posición neta estimada por ticker + operaciones) y
+**Operaciones ganadoras** (mejores/peores compras valuadas).
+
 ---
 
 ## 🗺️ Hoja de ruta
@@ -107,7 +117,7 @@ estimada por ticker, con el punto medio del rango).
 | **4** | Enriquecimiento con precios de mercado (yfinance) | ✅ |
 | **5** | Portafolio y P/L estimado por congresista | ✅ |
 | **6** | API (FastAPI) | ⏳ |
-| **7** | Frontend (Streamlit) | ⏳ |
+| **7** | Frontend (Streamlit) | ✅ |
 
 > **Cobertura histórica:** el índice existe desde **2008**, pero los PTR
 > (operaciones) sólo desde **2013** (STOCK Act): ~8,200 PTR en 2013–2026
