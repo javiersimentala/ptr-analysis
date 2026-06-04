@@ -5,6 +5,22 @@ reciente va arriba.
 
 ---
 
+## 2026-06-04 — Fase 7 (frontend Streamlit)
+
+- `frontend/app.py`: dashboard que **lee SQLite directo** (sin API): pestañas de
+  Ranking por P/L, Congresista (posición neta estimada por ticker + operaciones)
+  y Operaciones ganadoras (mejores/peores compras valuadas). Defensivo ante base
+  vacía.
+- Capa de consultas testeable: `backend/portfolio/queries.py`.
+- Tests: `test_queries.py` + **smoke test** con `streamlit.testing.v1.AppTest`
+  (`test_frontend_smoke.py`) que corre el app headless y verifica que no lanza
+  excepción (pasa con base vacía o poblada). Suite total: 26 tests.
+- Validado: `streamlit run frontend/app.py` levanta OK (health `ok`, root 200).
+- Se hizo primero el frontend (decisión del usuario); la API (Fase 6) queda pendiente.
+- Rama `feature/frontend`.
+
+---
+
 ## 2026-06-03 — Fase 5 (portafolio y P/L por congresista)
 
 - `backend/portfolio/builder.py`: agrega `transactions` por congresista
