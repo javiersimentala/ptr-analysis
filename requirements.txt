@@ -1,5 +1,6 @@
-# La Fase 1 (ingesta del indice) funciona solo con la libreria estandar.
-# Estas dependencias se necesitan a partir de la Fase 2/3 en adelante.
+# Dependencias del proyecto PTR Analysis.
+# La Fase 1 (ingesta del indice) corre solo con la libreria estandar; el resto
+# de los componentes necesitan los paquetes de abajo.
 
 # --- Descarga / scraping (Fase 2) ---
 requests>=2.32
@@ -7,19 +8,14 @@ requests>=2.32
 # --- Parsing de PDFs (Fase 3) ---
 pdfplumber>=0.11
 
-# --- Datos de mercado (Fase 4) ---
+# --- Datos de mercado y P/L estimado (Fase 4) ---
 yfinance>=0.2.40
 pandas>=2.2
 
-# --- Base de datos (capa ORM opcional) ---
-SQLAlchemy>=2.0
-
-# --- API (Fase 6) ---
+# --- Web: API JSON y paginas HTML (FastAPI + Jinja2 + Tailwind via CDN) ---
 fastapi>=0.115
 uvicorn>=0.30
-
-# --- Frontend (Fase 7) ---
-streamlit>=1.36
+jinja2>=3.1
 
 # --- Notebooks / utilidades ---
 jupyter>=1.0
@@ -27,3 +23,4 @@ openpyxl>=3.1
 
 # --- Calidad / pruebas ---
 pytest>=8.0
+httpx>=0.27          # requerido por el TestClient de FastAPI

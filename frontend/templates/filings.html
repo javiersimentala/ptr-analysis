@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Filings &middot; PTR Analysis{% endblock %}
+{% block content %}
+  <h1 class="text-xl font-semibold text-slate-900">Filings</h1>
+  <p class="text-sm text-slate-500 mb-6">
+    Periodic Transaction Reports presentados por congresistas, con el numero de operaciones de cada uno.
+  </p>
+
+  <form method="get" class="bg-white border border-slate-200 rounded-lg p-4 mb-6 grid gap-4 sm:grid-cols-4">
+    <div class="sm:col-span-2">
+      <label class="block text-xs font-medium text-slate-600 mb-1">Congresista</label>
+      <select name="key" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm bg-white">
+        <option value="">Todos</option>
+        {% for mb in members %}
+          <option value="{{ mb.member_key }}" {% if mb.member_key == sel_key %}selected{% endif %}>
+            {{ display_name(mb.last_name, mb.first_name) }} ({{ mb.state_dst or '?' }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-slate-600 mb-1">Año</label>
+      <select name="year" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm bg-white">
+        <option value="">Todos</option>
+        {% for y in years %}
+          <option value="{{ y }}" {% if sel_year and y == sel_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button class="bg-indigo-600 text-white text-sm px-4 py-1.5 rounded hover:bg-indigo-700">
+        Aplicar filtros
+      </button>
+    </div>
+  </form>
+
+  <div class="text-sm text-slate-500 mb-2">Mostrando {{ rows|length }} de {{ total }} filings</div>
+
+  <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+        <tr>
+          <th>Congresista</th>
+          <th>Distrito</th>
+          <th>Fecha de presentacion</th>
+          <th class="text-right">Transacciones</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for r in rows %}
+          <tr class="hover:bg-slate-50">
+            <td class="font-medium text-slate-800">{{ display_name(r.last_name, r.first_name) }}</td>
+            <td class="text-slate-500">{{ r.state_dst or '—' }}</td>
+            <td class="text-slate-500">{{ r.filing_date or '—' }}</td>
+            <td class="text-right">{{ r.n_tx }}</td>
+            <td class="text-right">
+              <a class="text-indigo-600 hover:underline" href="/politician?key={{ r.member_key|urlencode }}">
+                Ver portafolio
+              </a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-slate-400 py-6">
+            Sin datos. Ejecuta el pipeline (ver README).
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+    <div class="flex items-center justify-between mt-4 text-sm">
+      <span class="text-slate-500">Pagina {{ page }} de {{ pages }}</span>
+      <div class="flex gap-2">
+        {% set base = '/filings?key=' ~ (sel_key or '')|urlencode ~ '&year=' ~ (sel_year or '') %}
+        {% if page > 1 %}
+          <a class="px-3 py-1 border border-slate-300 rounded hover:bg-slate-50" href="{{ base }}&page={{ page - 1 }}">Anterior</a>
+        {% endif %}
+        {% if page < pages %}
+          <a class="px-3 py-1 border border-slate-300 rounded hover:bg-slate-50" href="{{ base }}&page={{ page + 1 }}">Siguiente</a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

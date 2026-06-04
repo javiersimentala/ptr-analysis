@@ -94,15 +94,16 @@ y el actual, y estima la ganancia/pérdida por rango. La Fase 5 agrega todo por
 congresista en `members` (resumen, P/L, win-rate) y `positions` (posición neta
 estimada por ticker, con el punto medio del rango).
 
-### 🖥️ Dashboard (Streamlit)
+### Interfaz web (FastAPI)
 
 ```bash
-streamlit run frontend/app.py
+python scripts/run_web.py            # http://127.0.0.1:8000
 ```
 
-Abre `http://localhost:8501` con tres vistas: **Ranking** por P/L estimado,
-**Congresista** (posición neta estimada por ticker + operaciones) y
-**Operaciones ganadoras** (mejores/peores compras valuadas).
+Sirve páginas HTML (Jinja2 + Tailwind) y una API JSON (`/api/...`). Vistas:
+Filings (tabla filtrable por congresista y año), Congresistas (buscador),
+Portafolio del congresista (posición neta estimada por ticker, con selector de
+año/periodo) y Comparar / Portafolio óptimo (en desarrollo).
 
 ---
 
@@ -116,8 +117,8 @@ Abre `http://localhost:8501` con tres vistas: **Ranking** por P/L estimado,
 | **3** | Parsing de PDFs → tabla `transactions` | ✅ |
 | **4** | Enriquecimiento con precios de mercado (yfinance) | ✅ |
 | **5** | Portafolio y P/L estimado por congresista | ✅ |
-| **6** | API (FastAPI) | ⏳ |
-| **7** | Frontend (Streamlit) | ✅ |
+| **6** | API y web (FastAPI + Jinja2 + Tailwind) | ✅ |
+| **7** | Interfaz web (Filings, Congresistas, Portafolio) | ✅ |
 
 > **Cobertura histórica:** el índice existe desde **2008**, pero los PTR
 > (operaciones) sólo desde **2013** (STOCK Act): ~8,200 PTR en 2013–2026

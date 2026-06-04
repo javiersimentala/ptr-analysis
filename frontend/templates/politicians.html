@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Congresistas &middot; PTR Analysis{% endblock %}
+{% block content %}
+  <h1 class="text-xl font-semibold text-slate-900">Congresistas</h1>
+  <p class="text-sm text-slate-500 mb-6">Busca y selecciona a la persona que quieres analizar.</p>
+
+  <form method="get" class="mb-6 flex gap-2">
+    <input name="q" value="{{ q }}" placeholder="Buscar por apellido o nombre..."
+           class="w-full sm:w-96 border border-slate-300 rounded px-3 py-2 text-sm"
+           autocomplete="off">
+    <button class="bg-indigo-600 text-white text-sm px-4 py-2 rounded hover:bg-indigo-700">Buscar</button>
+    {% if q %}<a href="/politicians" class="text-sm text-slate-500 px-3 py-2 hover:text-slate-800">Limpiar</a>{% endif %}
+  </form>
+
+  <div class="text-sm text-slate-500 mb-3">{{ members|length }} congresistas</div>
+
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for m in members %}
+      <a href="/politician?key={{ m.member_key|urlencode }}"
+         class="block bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-sm transition">
+        <div class="font-medium text-slate-900">{{ display_name(m.last_name, m.first_name) }}</div>
+        <div class="text-xs text-slate-500 mb-3">{{ m.state_dst or '—' }}</div>
+        <div class="flex justify-between items-baseline text-sm">
+          <span class="text-slate-500">{{ m.n_tx }} operaciones</span>
+          <span class="font-medium {% if m.est_gain_max and m.est_gain_max > 0 %}text-emerald-600
+                       {% elif m.est_gain_max and m.est_gain_max < 0 %}text-rose-600
+                       {% else %}text-slate-400{% endif %}">
+            {{ m.est_gain_max|money }}
+          </span>
+        </div>
+      </a>
+    {% else %}
+      <p class="text-slate-400">Sin congresistas. Ejecuta el pipeline (ver README).</p>
+    {% endfor %}
+  </div>
+{% endblock %}

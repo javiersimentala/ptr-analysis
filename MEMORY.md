@@ -5,7 +5,26 @@ reciente va arriba.
 
 ---
 
-## 2026-06-04 — Fase 7 (frontend Streamlit)
+## 2026-06-04 — Web FastAPI reemplaza a Streamlit (PR1 de la web)
+
+- A pedido del usuario, se sustituye Streamlit por una **web real con FastAPI +
+  Jinja2 + Tailwind (CDN)**: tema claro y profesional inspirado en pelositracker,
+  **sin emojis**. Sirve páginas HTML y API JSON (`/api/...`).
+- Páginas: Filings (tabla filtrable por congresista/año + paginación),
+  Congresistas (buscador por nombre), Portafolio del congresista (posición neta
+  estimada por ticker + operaciones, con **selector de año/periodo**). Stubs de
+  Comparar / Portafolio óptimo.
+- Estructura: `backend/api/` (`main.py` + `__init__` comentado), `frontend/templates/`,
+  `frontend/static/`, `scripts/run_web.py`. Consultas en `backend/portfolio/queries.py`.
+- Se elimina Streamlit (app + dependencia) y SQLAlchemy (no se usaba). Se agrega
+  `jinja2` y `httpx` (TestClient). Tests en `tests/test_api.py` (26 en total).
+- Detalle técnico: `TemplateResponse` usa la firma nueva de Starlette
+  (`request` primero); la vieja rompía con TypeError de cache.
+- Rama `feature/web-app`. Pendientes: PR2 (comparar + óptimo Markowitz), PR3 (README).
+
+---
+
+## 2026-06-04 — Fase 7 (frontend Streamlit, reemplazado)
 
 - `frontend/app.py`: dashboard que **lee SQLite directo** (sin API): pestañas de
   Ranking por P/L, Congresista (posición neta estimada por ticker + operaciones)

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ display_name(m.last_name, m.first_name) if m else 'Congresista' }} &middot; PTR Analysis{% endblock %}
+{% block content %}
+  {% if not m %}
+    <p class="text-slate-500">No se encontro el congresista. <a class="text-indigo-600 hover:underline" href="/politicians">Volver al listado</a>.</p>
+  {% else %}
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+      <div>
+        <a href="/politicians" class="text-sm text-slate-500 hover:text-slate-800">&larr; Congresistas</a>
+        <h1 class="text-2xl font-semibold text-slate-900 mt-1">{{ display_name(m.last_name, m.first_name) }}</h1>
+        <p class="text-sm text-slate-500">{{ m.state_dst or '—' }}</p>
+      </div>
+      <form method="get" class="flex items-end gap-2">
+        <input type="hidden" name="key" value="{{ member_key }}">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Periodo</label>
+          <select name="year" onchange="this.form.submit()"
+                  class="border border-slate-300 rounded px-2 py-1.5 text-sm bg-white">
+            <option value="">Todos los años</option>
+            {% for y in years %}
+              <option value="{{ y }}" {% if sel_year and y == sel_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
+    </div>
+
+    {% set cards = [
+      ('Operaciones', summary.n_tx ~ '  (' ~ (summary.n_buys or 0) ~ ' compras / ' ~ (summary.n_sells or 0) ~ ' ventas)'),
+      ('Invertido (rango)', (summary.invested_min|money) ~ ' – ' ~ (summary.invested_max|money)),
+      ('P/L estimado', summary.est_gain_max|money),
+      ('Win-rate', summary.win_rate|pct),
+    ] %}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      {% for label, value in cards %}
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-500">{{ label }}</div>
+          <div class="text-lg font-semibold text-slate-900 mt-1">{{ value }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-2">Posicion neta estimada por ticker</h2>
+    <p class="text-xs text-slate-500 mb-3">
+      Neto estimado = suma de puntos medios de compras menos ventas. Estimacion direccional en dolares.
+    </p>
+    <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg mb-10">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+          <tr>
+            <th>Ticker</th><th class="text-right">Compras</th><th class="text-right">Ventas</th>
+            <th class="text-right">Neto est. ($)</th><th class="text-right">Var. %</th>
+            <th class="text-right">Precio actual</th><th class="text-right">P/L est. ($)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for p in positions %}
+            <tr class="hover:bg-slate-50">
+              <td class="font-medium text-slate-800">{{ p.ticker }}</td>
+              <td class="text-right">{{ p.n_buys }}</td>
+              <td class="text-right">{{ p.n_sells }}</td>
+              <td class="text-right">{{ p.net_value|money }}</td>
+              <td class="text-right {% if p.return_pct and p.return_pct > 0 %}text-emerald-600{% elif p.return_pct and p.return_pct < 0 %}text-rose-600{% endif %}">{{ p.return_pct|pct }}</td>
+              <td class="text-right text-slate-500">{{ p.price_current|money }}</td>
+              <td class="text-right">{{ p.est_gain_max|money }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="text-center text-slate-400 py-6">Sin posiciones con ticker en este periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-3">Operaciones</h2>
+    <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+          <tr><th>Fecha</th><th>Tipo</th><th>Ticker</th><th>Activo</th><th>Monto</th><th class="text-right">Var. %</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for t in txs %}
+            <tr class="hover:bg-slate-50">
+              <td class="text-slate-500 whitespace-nowrap">{{ t.tx_date }}</td>
+              <td>{% if t.tx_type == 'P' %}<span class="text-emerald-700">Compra</span>{% elif t.tx_type == 'S' %}<span class="text-rose-700">Venta</span>{% else %}{{ t.tx_type }}{% endif %}</td>
+              <td class="font-medium">{{ t.ticker or '—' }}</td>
+              <td class="text-slate-600 max-w-md truncate" title="{{ t.asset_name }}">{{ t.asset_name or '—' }}</td>
+              <td class="text-slate-500 whitespace-nowrap">{{ t.raw_amount or '—' }}</td>
+              <td class="text-right {% if t.return_pct and t.return_pct > 0 %}text-emerald-600{% elif t.return_pct and t.return_pct < 0 %}text-rose-600{% endif %}">{{ t.return_pct|pct }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-center text-slate-400 py-6">Sin operaciones en este periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}
