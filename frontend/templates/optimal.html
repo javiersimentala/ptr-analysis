@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Portafolio optimo &middot; PTR Analysis{% endblock %}
+{% block content %}
+  <h1 class="text-xl font-semibold text-slate-900">Portafolio optimo (Markowitz)</h1>
+  <p class="text-sm text-slate-500 mb-6">
+    Maximo ratio de Sharpe (solo posiciones largas) sobre el universo de tickers con mayor
+    posicion neta agregada del Congreso. Estimacion educativa basada en historial de precios;
+    no es asesoria de inversion.
+  </p>
+
+  {% if not meta %}
+    <div class="bg-white border border-slate-200 rounded-lg p-8 text-slate-500">
+      Aun no se ha calculado el portafolio optimo. Ejecuta:
+      <code class="block mt-2 text-slate-800 bg-slate-50 rounded px-3 py-2">python scripts/run_optimal.py</code>
+      <span class="text-xs">(requiere haber corrido antes run_portfolio).</span>
+    </div>
+  {% else %}
+    {% set cards = [
+      ('Retorno esperado (anual)', meta.exp_return|pct),
+      ('Volatilidad (anual)', meta.volatility|pct),
+      ('Ratio de Sharpe', '%.2f'|format(meta.sharpe)),
+      ('Activos', meta.n_assets),
+    ] %}
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      {% for label, value in cards %}
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-xs uppercase tracking-wide text-slate-500">{{ label }}</div>
+          <div class="text-lg font-semibold text-slate-900 mt-1">{{ value }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-2">Pesos optimos</h2>
+    <div class="overflow-x-auto bg-white border border-slate-200 rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600 text-left border-b border-slate-200">
+          <tr>
+            <th>Ticker</th><th class="text-right">Peso</th>
+            <th class="text-right">Retorno esperado</th><th class="text-right">Volatilidad</th>
+            <th class="w-1/3">Asignacion</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for w in weights %}
+            <tr class="hover:bg-slate-50">
+              <td class="font-medium">{{ w.ticker }}</td>
+              <td class="text-right">{{ w.weight|pct }}</td>
+              <td class="text-right {% if w.exp_return and w.exp_return > 0 %}text-emerald-600{% elif w.exp_return and w.exp_return < 0 %}text-rose-600{% endif %}">{{ w.exp_return|pct }}</td>
+              <td class="text-right text-slate-500">{{ w.volatility|pct }}</td>
+              <td><div class="bg-indigo-500 rounded h-3" style="width: {{ (w.weight * 100)|round(1) }}%"></div></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-slate-400 mt-3">Calculado: {{ meta.computed_at }} &middot; ventana de {{ meta.lookback_days }} dias.</p>
+  {% endif %}
+{% endblock %}

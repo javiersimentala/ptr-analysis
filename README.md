@@ -103,7 +103,8 @@ python scripts/run_web.py            # http://127.0.0.1:8000
 Sirve páginas HTML (Jinja2 + Tailwind) y una API JSON (`/api/...`). Vistas:
 Filings (tabla filtrable por congresista y año), Congresistas (buscador),
 Portafolio del congresista (posición neta estimada por ticker, con selector de
-año/periodo) y Comparar / Portafolio óptimo (en desarrollo).
+año/periodo), Comparar (portafolios lado a lado) y Portafolio óptimo
+(media-varianza / Markowitz).
 
 ---
 

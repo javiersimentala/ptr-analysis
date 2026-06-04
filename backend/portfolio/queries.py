@@ -152,6 +152,27 @@ def member_portfolio(
     return conn.execute(sql, params).fetchall()
 
 
+def members_by_keys(conn: sqlite3.Connection, keys: list[str]) -> list[sqlite3.Row]:
+    """Resumen de varios congresistas (preservando el orden de ``keys``)."""
+    if not keys:
+        return []
+    placeholders = ",".join("?" * len(keys))
+    rows = conn.execute(
+        f"SELECT * FROM members WHERE member_key IN ({placeholders})", keys
+    ).fetchall()
+    by_key = {r["member_key"]: r for r in rows}
+    return [by_key[k] for k in keys if k in by_key]
+
+
+def optimal_portfolio(conn: sqlite3.Connection):
+    """Devuelve (meta, pesos) del portafolio optimo guardado, o (None, [])."""
+    meta = conn.execute("SELECT * FROM optimal_meta WHERE id = 1").fetchone()
+    weights = conn.execute(
+        "SELECT * FROM optimal_weights ORDER BY weight DESC"
+    ).fetchall()
+    return meta, weights
+
+
 def member_period_summary(
     conn: sqlite3.Connection, member_key: str, year: int | None = None
 ) -> sqlite3.Row:
