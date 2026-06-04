@@ -63,15 +63,118 @@ def positions(conn: sqlite3.Connection, member_key: str) -> list[sqlite3.Row]:
 
 
 def member_transactions(
-    conn: sqlite3.Connection, member_key: str, limit: int = 1000
+    conn: sqlite3.Connection, member_key: str, year: int | None = None, limit: int = 1000
 ) -> list[sqlite3.Row]:
-    return conn.execute(
+    """Operaciones de un congresista, opcionalmente filtradas por año."""
+    sql = (
         f"SELECT t.tx_date, t.tx_type, t.ticker, t.asset_name, t.raw_amount, "
         f"t.return_pct, t.est_gain_min, t.est_gain_max, t.price_status "
+        f"FROM transactions t JOIN filings f ON f.doc_id = t.doc_id WHERE {_KEY} = ?"
+    )
+    params: list = [member_key]
+    if year:
+        sql += " AND f.year = ?"
+        params.append(int(year))
+    sql += " ORDER BY t.tx_date DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(sql, params).fetchall()
+
+
+# Punto medio del rango de monto de una transacción (para valores en dólares).
+_MID = "(t.amount_min + COALESCE(t.amount_max, t.amount_min)) / 2.0"
+
+
+def available_years(conn: sqlite3.Connection) -> list[int]:
+    """Años con PTR disponibles, de más reciente a más antiguo (para el selector)."""
+    return [r[0] for r in conn.execute(
+        "SELECT DISTINCT year FROM filings WHERE filing_type = 'P' ORDER BY year DESC"
+    )]
+
+
+def list_filings(
+    conn: sqlite3.Connection, member_key: str | None = None, year: int | None = None,
+    limit: int = 50, offset: int = 0,
+) -> list[sqlite3.Row]:
+    """Lista de PTR (con conteo de transacciones), filtrable por congresista y año."""
+    sql = (
+        f"SELECT f.doc_id, f.last_name, f.first_name, f.state_dst, f.filing_date, "
+        f"{_KEY} AS member_key, "
+        f"(SELECT COUNT(*) FROM transactions t WHERE t.doc_id = f.doc_id) AS n_tx "
+        f"FROM filings f WHERE f.filing_type = 'P'"
+    )
+    params: list = []
+    if member_key:
+        sql += f" AND {_KEY} = ?"
+        params.append(member_key)
+    if year:
+        sql += " AND f.year = ?"
+        params.append(int(year))
+    sql += " ORDER BY f.filing_date DESC, f.doc_id DESC LIMIT ? OFFSET ?"
+    params += [limit, offset]
+    return conn.execute(sql, params).fetchall()
+
+
+def count_filings(
+    conn: sqlite3.Connection, member_key: str | None = None, year: int | None = None
+) -> int:
+    sql = "SELECT COUNT(*) FROM filings f WHERE f.filing_type = 'P'"
+    params: list = []
+    if member_key:
+        sql += f" AND {_KEY} = ?"
+        params.append(member_key)
+    if year:
+        sql += " AND f.year = ?"
+        params.append(int(year))
+    return conn.execute(sql, params).fetchone()[0]
+
+
+def member_portfolio(
+    conn: sqlite3.Connection, member_key: str, year: int | None = None
+) -> list[sqlite3.Row]:
+    """Posición neta estimada por ticker de un congresista (opcional: un año)."""
+    sql = (
+        f"SELECT t.ticker, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN 1 ELSE 0 END) AS n_buys, "
+        f"SUM(CASE WHEN t.tx_type='S' THEN 1 ELSE 0 END) AS n_sells, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN {_MID} ELSE 0 END) AS buy_value, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN {_MID} "
+        f"         WHEN t.tx_type='S' THEN -{_MID} ELSE 0 END) AS net_value, "
+        f"SUM(t.est_gain_min) AS est_gain_min, SUM(t.est_gain_max) AS est_gain_max, "
+        f"AVG(t.return_pct) AS return_pct, MAX(t.price_current) AS price_current "
         f"FROM transactions t JOIN filings f ON f.doc_id = t.doc_id "
-        f"WHERE {_KEY} = ? ORDER BY t.tx_date DESC LIMIT ?",
-        (member_key, limit),
-    ).fetchall()
+        f"WHERE {_KEY} = ? AND t.ticker IS NOT NULL"
+    )
+    params: list = [member_key]
+    if year:
+        sql += " AND f.year = ?"
+        params.append(int(year))
+    sql += " GROUP BY t.ticker ORDER BY net_value DESC"
+    return conn.execute(sql, params).fetchall()
+
+
+def member_period_summary(
+    conn: sqlite3.Connection, member_key: str, year: int | None = None
+) -> sqlite3.Row:
+    """Totales de un congresista para el periodo (todo o un año)."""
+    sql = (
+        f"SELECT COUNT(*) AS n_tx, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN 1 ELSE 0 END) AS n_buys, "
+        f"SUM(CASE WHEN t.tx_type='S' THEN 1 ELSE 0 END) AS n_sells, "
+        f"COUNT(DISTINCT t.ticker) AS n_tickers, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN t.amount_min ELSE 0 END) AS invested_min, "
+        f"SUM(CASE WHEN t.tx_type='P' THEN COALESCE(t.amount_max,t.amount_min) ELSE 0 END) AS invested_max, "
+        f"SUM(t.est_gain_min) AS est_gain_min, SUM(t.est_gain_max) AS est_gain_max, "
+        f"CAST(SUM(CASE WHEN t.tx_type='P' AND t.price_status='ok' AND t.return_pct>0 "
+        f"             THEN 1 ELSE 0 END) AS REAL) "
+        f"  / NULLIF(SUM(CASE WHEN t.tx_type='P' AND t.price_status='ok' "
+        f"                    THEN 1 ELSE 0 END), 0) AS win_rate "
+        f"FROM transactions t JOIN filings f ON f.doc_id = t.doc_id WHERE {_KEY} = ?"
+    )
+    params: list = [member_key]
+    if year:
+        sql += " AND f.year = ?"
+        params.append(int(year))
+    return conn.execute(sql, params).fetchone()
 
 
 def top_operations(

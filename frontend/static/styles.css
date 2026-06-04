@@ -1,0 +1,18 @@
+/* Estilos propios mínimos que complementan a Tailwind (cargado por CDN).
+   Se mantiene deliberadamente pequeño: la mayoría del estilo va en las clases
+   utilitarias de Tailwind dentro de las plantillas. */
+
+/* Encabezados de tabla consistentes. */
+table thead th {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+table tbody td {
+  padding: 0.5rem 1rem;
+}
+
+/* Tipografía base del sistema (sin dependencias de fuentes externas). */
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
