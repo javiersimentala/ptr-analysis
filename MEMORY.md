@@ -172,7 +172,7 @@ reciente va arriba.
   `…/ptr-pdfs/{year}/{DocID}.pdf` (verificado: responde `application/pdf`).
 - Tipos de filing relevantes: sólo **`P` = Periodic Transaction Report** tiene
   operaciones bursátiles. En el índice 2026 hay ~227 PTR.
-- ⚠️ Un PTR declara **rangos de monto**, no precios/cantidades exactas. El precio
+- Un PTR declara **rangos de monto**, no precios/cantidades exactas. El precio
   de compra y el actual deben derivarse de datos de mercado por ticker+fecha.
 
 **Implementado**

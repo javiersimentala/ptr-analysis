@@ -1,144 +1,346 @@
-# PTR Analysis — Periodic Transaction Reports del Congreso de EE.UU.
+# PTR Analysis
 
-Pipeline de **scraping y análisis** de los *Periodic Transaction Reports* (PTR)
-que los congresistas de la Cámara de Representantes de EE.UU. están obligados a
-publicar a través del [House Clerk](https://disclosures-clerk.house.gov/FinancialDisclosure).
+Pipeline de extraccion y analisis de los *Periodic Transaction Reports* (PTR) que
+los representantes de la Camara de Representantes de los Estados Unidos estan
+obligados a publicar a traves del
+[House Clerk](https://disclosures-clerk.house.gov/FinancialDisclosure).
 
-El objetivo es, por cada congresista, **listar y almacenar todas sus operaciones**
-(compra/venta de activos), estimar el **precio al momento de la operación** y el
-**precio actual**, calcular la **ganancia/pérdida** y reconstruir su **portafolio**.
+Por cada congresista, el proyecto lista y almacena todas sus operaciones de
+compra/venta de activos, estima el precio en la fecha de la operacion y el precio
+actual, calcula una ganancia/perdida estimada y reconstruye un portafolio. Sobre
+esos datos ofrece una interfaz web (FastAPI) con ranking, busqueda, comparacion
+de portafolios y un portafolio optimo (media-varianza).
 
-> ⚖️ **Aviso:** toda la información proviene de divulgaciones públicas oficiales.
-> Este proyecto es con fines de investigación y educativos. **No es asesoría de
-> inversión.**
+> **Aviso.** Toda la informacion proviene de divulgaciones publicas oficiales.
+> Este proyecto es para investigacion y educacion. No constituye asesoria de
+> inversion. El P/L es una estimacion por rango (ver "Realidad de los datos").
 
 ---
 
-## 📐 Realidad de los datos (leer antes de usar)
+## Tabla de contenido
 
-Un PTR **no** declara precios ni cantidades exactas. Sólo declara, por operación:
-activo, *ticker* (a veces), tipo (compra `P` / venta `S` / intercambio `E`),
-fecha y un **rango de monto** (p. ej. `$1,001 – $15,000`). Por lo tanto:
+1. [Realidad de los datos](#realidad-de-los-datos)
+2. [Arquitectura y estructura](#arquitectura-y-estructura)
+3. [Modelo de datos](#modelo-de-datos)
+4. [Instalacion](#instalacion)
+5. [Pipeline de datos paso a paso](#pipeline-de-datos-paso-a-paso)
+6. [Referencia de scripts](#referencia-de-scripts)
+7. [Interfaz web y API](#interfaz-web-y-api)
+8. [Pruebas](#pruebas)
+9. [Estrategia de ramas](#estrategia-de-ramas)
 
-- El **precio de compra** y el **precio actual** se **derivan** de un proveedor de
-  mercado (ticker + fecha histórica), no salen del reporte.
-- La **ganancia/pérdida** es una **estimación por rango**, no un número exacto.
-- Activos sin ticker (bonos, fondos privados, opciones, inmuebles) se marcan como
-  **no valuables** automáticamente.
+---
 
-**Fuentes oficiales** (sin necesidad de scrapear el formulario "Search"):
+## Realidad de los datos
+
+Un PTR no declara precios ni cantidades exactas. Por cada operacion declara:
+activo, ticker (a veces), tipo (compra `P` / venta `S` / intercambio `E`), fecha y
+un rango de monto (por ejemplo `$1,001 - $15,000`). En consecuencia:
+
+- El precio de compra y el precio actual se derivan de un proveedor de mercado
+  (yfinance) por ticker y fecha; no salen del reporte.
+- La ganancia/perdida es una estimacion por rango, no un numero exacto.
+- Activos sin ticker (bonos, fondos, notas estructuradas) se marcan como no
+  valuables (`price_status = 'no_ticker'`).
+
+Fuentes oficiales (no hace falta scrapear el formulario "Search"):
 
 | Recurso | URL |
 |---|---|
-| Índice anual (ZIP con `{year}FD.txt`) | `…/public_disc/financial-pdfs/{year}FD.zip` |
-| PDF de cada PTR (e-filed) | `…/public_disc/ptr-pdfs/{year}/{DocID}.pdf` |
+| Indice anual (ZIP con `{ano}FD.txt`) | `.../public_disc/financial-pdfs/{ano}FD.zip` |
+| PDF de cada PTR (e-filed) | `.../public_disc/ptr-pdfs/{ano}/{DocID}.pdf` |
+
+Cobertura historica: el indice existe desde 2008, pero los PTR (operaciones)
+existen desde 2013 (STOCK Act): aproximadamente 8,200 PTR entre 2013 y 2026
+(unos 450 a 830 por ano). Los PDFs e-filed se parsean como texto; los escaneados
+(sobre todo 2013 e inicios de 2014, con DocID corto) no tienen texto y dan cero
+transacciones: requeririan OCR (pendiente).
 
 ---
 
-## 🗂️ Estructura del proyecto
+## Arquitectura y estructura
 
 ```
 ptr-analysis/
-├── backend/
-│   ├── config.py          # rutas, URLs y constantes
-│   ├── db/                # esquema SQLite + acceso a datos
-│   └── ingest/            # Fase 1 — ingesta del índice (FD.txt)
-├── scripts/               # entradas de línea de comandos
-├── notebooks/             # exploración (parsing de PDFs, validación)
-├── tests/                 # pruebas con pytest
-├── data/                  # raw/ y processed/  (ignorado por git)
-├── frontend/              # dashboard Streamlit  (Fase 7)
-├── requirements.txt
-└── pyproject.toml
+|-- backend/
+|   |-- config.py            Rutas, URLs y parametros centrales.
+|   |-- db/
+|   |   |-- schema.sql       Esquema SQLite (todas las tablas).
+|   |   |-- database.py      Conexion (WAL) + creacion/migracion de tablas.
+|   |-- ingest/
+|   |   |-- index_ingest.py  Fase 1: descarga el ZIP del indice y carga `filings`.
+|   |-- download/
+|   |   |-- pdf_downloader.py Fase 2: descarga los PDFs de los PTR (cache + rate-limit).
+|   |-- parse/
+|   |   |-- ptr_parser.py     Fase 3: PDF -> transacciones (formato moderno y antiguo).
+|   |-- market/
+|   |   |-- prices.py         Fase 4: precios (yfinance) y P/L estimado.
+|   |-- portfolio/
+|   |   |-- builder.py        Fase 5: agrega `members` y `positions`.
+|   |   |-- queries.py        Consultas de lectura para la web.
+|   |   |-- optimize.py       Portafolio optimo (media-varianza / Markowitz).
+|   |-- api/
+|       |-- main.py           Aplicacion FastAPI: paginas HTML + API JSON.
+|-- frontend/
+|   |-- templates/           Plantillas Jinja2 (base, filings, politician, ...).
+|   |-- static/styles.css    Estilos propios minimos (Tailwind se carga por CDN).
+|-- scripts/                 Puntos de entrada de linea de comandos (ver referencia).
+|-- notebooks/               Exploracion (parsing de PDFs).
+|-- tests/                   Pruebas con pytest.
+|-- data/                    raw/ (PDFs, ZIPs) y processed/ (SQLite). Ignorado por git.
+|-- requirements.txt
+|-- pyproject.toml
 ```
+
+El proyecto es 100% Python. La web usa FastAPI + Jinja2 con Tailwind cargado por
+CDN: no hay paso de compilacion de JavaScript.
 
 ---
 
-## 🚀 Puesta en marcha
+## Modelo de datos
+
+Base SQLite en `data/processed/ptr.db`. Tablas principales:
+
+- `filings`      Indice de presentaciones (una fila por documento; `filing_type='P'`
+                 son los PTR). Marca `downloaded` y `parsed`.
+- `transactions` Operaciones extraidas de cada PTR (activo, ticker, tipo, fecha,
+                 rango de monto y, tras la Fase 4, precios y P/L estimado).
+- `prices`       Cache de cierres por ticker y fecha (yfinance).
+- `members`      Resumen por congresista (operaciones, invertido, P/L, win-rate).
+- `positions`    Posicion neta estimada por congresista y ticker.
+- `optimal_weights` / `optimal_meta`  Resultado del portafolio optimo.
+
+Las tablas `members`, `positions` y las `optimal_*` son derivadas: se reconstruyen
+desde `transactions` y se pueden regenerar en cualquier momento.
+
+---
+
+## Instalacion
+
+Requisitos: Python 3.11 o superior.
 
 ```bash
 # 1. Crear y activar el entorno virtual
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1        # Windows PowerShell
+.\.venv\Scripts\Activate.ps1          # Windows PowerShell
+# source .venv/bin/activate           # Linux / macOS
 
-# 2. Instalar dependencias (necesarias a partir de la Fase 2)
+# 2. Instalar dependencias
 pip install -r requirements.txt
+```
 
-# 3. Ejecutar la Fase 1 — ingesta del índice (un año, un rango o 'all')
-python scripts/run_ingest.py 2026          # un año
-python scripts/run_ingest.py 2013-2026     # un rango
-python scripts/run_ingest.py all           # todos los años disponibles (2008+)
+La Fase 1 (ingesta del indice) funciona solo con la libreria estandar; el resto de
+las fases necesitan las dependencias de `requirements.txt`.
 
-# 4. Ejecutar la Fase 2 — descargar los PDFs de los PTR
-python scripts/run_download.py 2026 --limit 10   # quita --limit para todos
+---
 
-# 5. Ejecutar la Fase 3 — parsear los PDFs a la tabla `transactions`
-python scripts/run_parse.py 2026
+## Pipeline de datos paso a paso
 
-# 6. Ejecutar la Fase 4 — precios de mercado y P/L estimado (yfinance)
-python scripts/run_enrich.py            # usa --limit N para acotar
+Ejecutar en este orden desde la raiz del proyecto. Cada script es idempotente y
+se puede repetir sin duplicar datos.
 
-# 7. Ejecutar la Fase 5 — portafolio y P/L por congresista
+```bash
+# 1. Indice de presentaciones -> tabla `filings`
+python scripts/run_ingest.py all          # todos los anos (2008+)
+
+# 2. Descargar los PDFs de los PTR -> data/raw/ptr/{ano}/
+python scripts/run_download.py all        # lote largo (~8,200 PDFs, ~1 req/s)
+
+# 3. Parsear los PDFs -> tabla `transactions`
+python scripts/run_parse.py all
+
+# 4. Precios de mercado y P/L estimado (yfinance) -> columnas de `transactions`
+python scripts/run_enrich.py
+
+# 5. Agregar portafolios -> tablas `members` y `positions`
 python scripts/run_portfolio.py
 
-# 8. Correr las pruebas
+# 6. Portafolio optimo (Markowitz) -> tablas `optimal_*`
+python scripts/run_optimal.py
+
+# 7. Levantar la web
+python scripts/run_web.py                 # http://127.0.0.1:8000
+```
+
+Para una prueba rapida sin bajar todo el historico, usar un solo ano y limites:
+`run_ingest.py 2026`, `run_download.py 2026 --limit 30`, `run_parse.py 2026`,
+`run_enrich.py --limit 20`, `run_portfolio.py`, `run_web.py`.
+
+---
+
+## Referencia de scripts
+
+Todos los scripts viven en `scripts/` y se ejecutan con
+`python scripts/<archivo>.py [argumentos]`.
+
+### run_ingest.py  (Fase 1)
+
+Descarga el ZIP del indice anual publicado por el House Clerk, extrae el archivo
+`{ano}FD.txt` (separado por tabuladores) y carga/actualiza la tabla `filings`. Solo
+usa la libreria estandar.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `año` (posicional) | Un ano (`2026`), un rango (`2013-2026`) o `all` (2008+) | ano de `config.DEFAULT_YEAR` |
+
+```bash
+python scripts/run_ingest.py 2026
+python scripts/run_ingest.py 2013-2026
+python scripts/run_ingest.py all
+```
+Prerrequisitos: ninguno. Salida: cuantos filings se cargaron por tipo y cuantos PTR.
+
+### run_download.py  (Fase 2)
+
+Recorre la tabla `filings` buscando PTR aun no descargados y baja cada PDF a
+`data/raw/ptr/{ano}/{DocID}.pdf`. Tiene cache en disco (no re-descarga lo
+existente), pausa entre descargas (cortesia con el servidor) y reintentos con
+backoff ante errores transitorios.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `año` (posicional) | Un ano (`2025`) o `all` (todos) | ano por defecto |
+| `--limit N` | Maximo de PDFs a bajar en esta corrida | sin limite |
+| `--delay S` | Pausa en segundos entre descargas | `1.0` |
+
+```bash
+python scripts/run_download.py 2026 --limit 30
+python scripts/run_download.py all
+```
+Prerrequisitos: haber corrido `run_ingest.py`. Nota: bajar todo el historico tarda
+alrededor de dos horas a 1 peticion/segundo; se puede correr por tramos.
+
+### run_parse.py  (Fase 3)
+
+Parsea los PDFs ya descargados y carga la tabla `transactions`. Extrae por
+operacion: owner (JT/SP/DC), activo, ticker, tipo de activo, tipo de operacion,
+fecha, fecha de notificacion y rango de monto. Maneja el formato moderno y el
+antiguo (~2014, con minusculas y sin codigo de tipo de activo). Los PDFs
+escaneados producen cero transacciones (se marcan como vacios, no fallan).
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `año` (posicional) | Un ano o `all` | ano por defecto |
+| `--limit N` | Maximo de PDFs a parsear | sin limite |
+| `--quiet` | No imprimir el detalle por archivo | desactivado |
+
+```bash
+python scripts/run_parse.py all --quiet
+```
+Prerrequisitos: haber corrido `run_download.py`.
+
+### run_enrich.py  (Fase 4)
+
+Para cada transaccion con ticker obtiene, via yfinance, el cierre en (o antes de)
+la fecha de la operacion (`price_at_tx`) y el ultimo cierre (`price_current`);
+calcula `return_pct` y, para compras, `est_gain_min`/`est_gain_max` (rango de monto
+por la variacion). Cachea los cierres en la tabla `prices`. Las transacciones sin
+ticker se marcan como `no_ticker`.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `--limit N` | Maximo de tickers a procesar | sin limite |
+| `--quiet` | No imprimir el detalle por ticker | desactivado |
+
+```bash
+python scripts/run_enrich.py --limit 50
+python scripts/run_enrich.py
+```
+Prerrequisitos: haber corrido `run_parse.py`. Nota: yfinance es gratuito pero no
+oficial; los tickers no encontrados o deslistados se marcan `no_price`.
+
+### run_portfolio.py  (Fase 5)
+
+Agrega las `transactions` por congresista (clave `apellido|nombre|estado-distrito`)
+en dos tablas: `members` (resumen, P/L estimado y win-rate de compras valuadas) y
+`positions` (posicion neta estimada por ticker = suma de puntos medios de compras
+menos ventas). Reconstruye ambas tablas en cada corrida.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `--top N` | Cuantos congresistas mostrar en el resumen | `15` |
+
+```bash
+python scripts/run_portfolio.py --top 30
+```
+Prerrequisitos: haber corrido `run_parse.py` (y `run_enrich.py` para el P/L).
+
+### run_optimal.py  (Portafolio optimo)
+
+Toma el universo de tickers con mayor posicion neta agregada del Congreso (tabla
+`positions`), descarga su historial de precios via yfinance, calcula el portafolio
+de maximo ratio de Sharpe (solo posiciones largas, totalmente invertido) y guarda
+los pesos en `optimal_weights` y las metricas en `optimal_meta`. La web solo lee el
+resultado ya calculado.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `--limit N` | Numero de tickers del universo | `25` |
+| `--lookback-days N` | Ventana de historial usada | `504` (~2 anos) |
+
+```bash
+python scripts/run_optimal.py --limit 25 --lookback-days 504
+```
+Prerrequisitos: haber corrido `run_portfolio.py`.
+
+### run_web.py  (Interfaz web)
+
+Levanta el servidor FastAPI (uvicorn) que sirve las paginas HTML y la API JSON.
+
+| Argumento | Descripcion | Por defecto |
+|---|---|---|
+| `--host H` | Interfaz de red | `127.0.0.1` |
+| `--port P` | Puerto | `8000` |
+| `--reload` | Recarga en caliente (desarrollo) | desactivado |
+
+```bash
+python scripts/run_web.py
+python scripts/run_web.py --port 8080 --reload
+```
+Prerrequisitos: haber corrido al menos `run_ingest.py`, `run_download.py` y
+`run_parse.py` (y `run_enrich.py` + `run_portfolio.py` para ver P/L y portafolios).
+
+---
+
+## Interfaz web y API
+
+`python scripts/run_web.py` y abrir `http://127.0.0.1:8000`.
+
+Paginas:
+
+- `/filings`    Tabla de PTR filtrable por congresista y ano, con paginacion.
+- `/politicians` Listado de congresistas con buscador por nombre o apellido.
+- `/politician?key=...` Portafolio de un congresista: resumen, posicion neta
+  estimada por ticker y operaciones, con selector de ano/periodo.
+- `/compare?keys=...&keys=...` Comparacion de portafolios lado a lado.
+- `/optimal`    Portafolio optimo (media-varianza) ya calculado.
+
+API JSON:
+
+- `GET /api/politicians?q=...`     Lista de congresistas (resumen).
+- `GET /api/politician?key=...&year=...`  Resumen, posiciones y P/L de uno.
+
+---
+
+## Pruebas
+
+```bash
 pytest
 ```
 
-La Fase 1 descarga el índice del año, lo carga en `data/processed/ptr.db`
-(SQLite) e imprime el conteo por tipo de filing. La Fase 2 baja los PDFs de
-cada PTR a `data/raw/ptr/{año}/` con caché y rate-limiting. La Fase 3 parsea
-cada PDF y carga la tabla `transactions` (activo, ticker, tipo, fecha y rango
-de monto). La Fase 4 añade, vía yfinance, el precio en la fecha de la operación
-y el actual, y estima la ganancia/pérdida por rango. La Fase 5 agrega todo por
-congresista en `members` (resumen, P/L, win-rate) y `positions` (posición neta
-estimada por ticker, con el punto medio del rango).
-
-### Interfaz web (FastAPI)
-
-```bash
-python scripts/run_web.py            # http://127.0.0.1:8000
-```
-
-Sirve páginas HTML (Jinja2 + Tailwind) y una API JSON (`/api/...`). Vistas:
-Filings (tabla filtrable por congresista y año), Congresistas (buscador),
-Portafolio del congresista (posición neta estimada por ticker, con selector de
-año/periodo), Comparar (portafolios lado a lado) y Portafolio óptimo
-(media-varianza / Markowitz).
+Las pruebas son hermeticas: no tocan la red (los proveedores de descarga, precios
+y mercado se inyectan o se simulan) ni dependen de la base de produccion. La web se
+prueba con el `TestClient` de FastAPI y funciona con base vacia o poblada.
 
 ---
 
-## 🗺️ Hoja de ruta
+## Estrategia de ramas
 
-| Fase | Descripción | Estado |
-|---|---|---|
-| **0** | Setup: repo, estructura, CI/git, docs | ✅ |
-| **1** | Ingesta del índice (`FD.txt` → tabla `filings`) | ✅ |
-| **2** | Descarga de los PDFs de cada PTR (con caché y rate-limit) | ✅ |
-| **3** | Parsing de PDFs → tabla `transactions` | ✅ |
-| **4** | Enriquecimiento con precios de mercado (yfinance) | ✅ |
-| **5** | Portafolio y P/L estimado por congresista | ✅ |
-| **6** | API y web (FastAPI + Jinja2 + Tailwind) | ✅ |
-| **7** | Interfaz web (Filings, Congresistas, Portafolio) | ✅ |
+- `main`      Estable y publicable.
+- `develop`   Integracion de los cambios.
+- `feature/*` Una rama por unidad de trabajo; se integra a `develop` via Pull
+  Request con CI (pruebas + escaneo de secretos) en verde, y `develop` se fusiona a
+  `main` por hito.
 
-> **Cobertura histórica:** el índice existe desde **2008**, pero los PTR
-> (operaciones) sólo desde **2013** (STOCK Act): ~8,200 PTR en 2013–2026
-> (≈450–830/año). Los e-filed se parsean como texto; los **escaneados** (sobre
-> todo 2013 e inicios de 2014) requieren OCR (pendiente). Carga histórica completa:
-> `python scripts/run_ingest.py all && python scripts/run_download.py all && python scripts/run_parse.py all`.
-
----
-
-## 🌳 Estrategia de ramas
-
-- `main` — estable / publicable.
-- `develop` — integración de las fases.
-- `feature/*` — una rama por unidad de trabajo (p. ej. `feature/pdf-download`,
-  `feature/pdf-parser`). Se integran a `develop` vía Pull Request.
-
----
-
-## 📓 Bitácora
-
-El historial de decisiones y cambios del proyecto se documenta en
+El historial de decisiones y cambios se documenta en
 [`MEMORY.md`](MEMORY.md).
