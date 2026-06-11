@@ -27,19 +27,24 @@ from backend import config
 from backend.db import database
 
 # Ancla de transacción: Tipo (P/S/E) + fecha + notificación + monto mín [- máx].
-# El tipo puede venir en minúscula en los PTR antiguos (~2014-2016).
+# Particularidades cubiertas:
+#   - El tipo puede venir en minúscula en los PTR antiguos (~2014-2016).
+#   - Las ventas parciales aparecen como "S (partial)" (frecuentes en filers
+#     grandes, p. ej. Pelosi); el "(partial)" es opcional en el ancla.
+#   - Los montos pueden traer decimales (p. ej. "$15.00" en intercambios).
 _ANCHOR = re.compile(
-    r"\b([PSEpse])\s+"
-    r"(\d{1,2}/\d{1,2}/\d{4})\s+"        # fecha de la operación (año 4 dígitos)
-    r"(\d{1,2}/\d{1,2}/\d{4})\s+"        # fecha de notificación
-    r"\$([\d,]+)"                         # monto mínimo
-    r"(?:\s*-\s*\$?([\d,]+))?"            # monto máximo (puede caer en la línea sig.)
+    r"\b([PSEpse])\s*"
+    r"(?:\(\s*[Pp]artial\s*\)\s*)?"       # venta/compra parcial opcional
+    r"(\d{1,2}/\d{1,2}/\d{4})\s+"         # fecha de la operación (año 4 dígitos)
+    r"(\d{1,2}/\d{1,2}/\d{4})\s+"         # fecha de notificación
+    r"\$([\d,]+(?:\.\d+)?)"               # monto mínimo (admite decimales)
+    r"(?:\s*-\s*\$?([\d,]+(?:\.\d+)?))?"  # monto máximo (puede caer en la línea sig.)
 )
 _OWNER = re.compile(r"^(JT|SP|DC)\b", re.IGNORECASE)
 _TICKER = re.compile(r"\(([A-Za-z][A-Za-z0-9.\-]{0,5})\)")   # moderno (activo con [ST])
 _TICKER_STRICT = re.compile(r"\(([A-Za-z]{1,5})\)")          # respaldo formato antiguo
 _ASSET_TYPE = re.compile(r"\[([A-Z]{2})\]")
-_AMOUNT_TOKEN = re.compile(r"\$([\d,]+)")
+_AMOUNT_TOKEN = re.compile(r"\$([\d,]+(?:\.\d+)?)")
 # Sub-línea de metadatos: etiqueta corta seguida de ':'.
 _META = re.compile(r"^[A-Za-z][\w .,&/()-]{0,30}:")
 

@@ -99,3 +99,40 @@ def test_formato_antiguo_2014():
     assert t["amount_min"] == 15001 and t["amount_max"] == 50000
     assert t["asset_name"].startswith("Hill International")
     assert "certify" not in (t["asset_name"] or "").lower()
+
+
+# --- Ventas parciales y montos con decimales (formato de filers grandes,    ---
+# --- p. ej. Pelosi 2026; lineas tomadas de un PTR real, doc 20033725).      ---
+PARTIAL_TEXT = (
+    "Filing ID #20033725\n"
+    "ID Owner Asset Transaction Date Notification Amount Cap.\n"
+    "Type Date Gains >\n"
+    "$200?\n"
+    "SP Apple Inc. - Common Stock (AAPL) S (partial) 12/24/2025 12/24/2025 $5,000,001 -\n"
+    "[ST] $25,000,000\n"
+    "F\x00\x00\x00\x00\x00 S\x00\x00\x00\x00\x00: New\n"
+    "SP Apple Inc. - Common Stock (AAPL) P 12/30/2025 12/30/2025 $250,001 -\n"
+    "[ST] $500,000\n"
+    "F\x00\x00\x00\x00\x00 S\x00\x00\x00\x00\x00: New\n"
+    "SP Versant Media Group, Inc. - Class A E 01/02/2026 01/02/2026 $15.00\n"
+    "[ST]\n"
+    "F\x00\x00\x00\x00\x00 S\x00\x00\x00\x00\x00: New\n"
+    "* For the complete list of asset type abbreviations, please visit ...\n"
+)
+
+
+def test_venta_parcial_se_captura():
+    txs = P.parse_transactions(PARTIAL_TEXT)
+    assert len(txs) == 3                       # antes el "(partial)" se perdia
+    partial = txs[0]
+    assert partial["tx_type"] == "S"
+    assert partial["owner"] == "SP"
+    assert partial["ticker"] == "AAPL"
+    assert partial["tx_date"] == "2025-12-24"
+    assert partial["amount_min"] == 5000001 and partial["amount_max"] == 25000000
+
+
+def test_monto_decimal_en_exchange():
+    ex = P.parse_transactions(PARTIAL_TEXT)[2]
+    assert ex["tx_type"] == "E"
+    assert ex["amount_min"] == 15.0            # "$15.00" con decimales
